@@ -32,9 +32,23 @@ services:
   worker:
     <<: *backend
     command: ["python", "-m", "app.buffer_worker"]
-    # The image health check probes HTTP; the worker has no HTTP endpoint.
+    environment:
+      <<: *backend-env
+      WORKER_HEARTBEAT_FILE: /tmp/worker.heartbeat
+    # The worker has no HTTP endpoint. It touches a heartbeat file after every
+    # loop iteration; it is healthy while that file is fresh, so a stuck loop
+    # is reported even though the process is still alive.
     healthcheck:
-      disable: true
+      test:
+        - CMD
+        - python
+        - -c
+        - 'import os, sys, time; p = os.environ["WORKER_HEARTBEAT_FILE"]; limit = max(60, 3 * int(os.environ["BUFFER_WORKER_POLL_SECONDS"])); sys.exit(0 if os.path.exists(p) and time.time() - os.path.getmtime(p) < limit else 1)'
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      start_interval: 1s
+      retries: 3
     depends_on:
       api:
         condition: service_healthy

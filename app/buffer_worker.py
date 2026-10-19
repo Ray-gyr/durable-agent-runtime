@@ -3,10 +3,18 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+from pathlib import Path
 
 from .buffer_service import flush_once
 from .config import Settings, build_object_store, build_repository
 from .ports import ObjectStore, Repository
+
+
+def beat(heartbeat_file: Path | None) -> None:
+    """Record that the loop completed an iteration; the container health check reads the file's age."""
+    if heartbeat_file is not None:
+        heartbeat_file.parent.mkdir(parents=True, exist_ok=True)
+        heartbeat_file.touch()
 
 
 async def run_worker(repo: Repository, store: ObjectStore, settings: Settings, once: bool = False) -> None:
@@ -23,6 +31,7 @@ async def run_worker(repo: Repository, store: ObjectStore, settings: Settings, o
         )
         if result["status"] != "idle":
             print(json.dumps(result, ensure_ascii=False), flush=True)
+        beat(settings.worker_heartbeat_file)
         if once:
             return
         await asyncio.sleep(settings.buffer_worker_poll_seconds)

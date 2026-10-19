@@ -45,6 +45,7 @@ class Settings:
     buffer_flush_lease_seconds: int
     buffer_worker_poll_seconds: int
     fault_plan: FaultPlan
+    worker_heartbeat_file: Path | None = None
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -64,6 +65,7 @@ class Settings:
                 latency_seconds=float_setting("FAULT_PUT_LATENCY_MS", 0.0) / 1000,
                 seed=int(float_setting("FAULT_SEED", 0)),
             ),
+            worker_heartbeat_file=Path(heartbeat) if (heartbeat := os.getenv("WORKER_HEARTBEAT_FILE")) else None,
         )
 
 

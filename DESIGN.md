@@ -332,5 +332,8 @@ and runs the smoke tests against it.
   backup are kept.
 - **No end-user authentication.** The service is meant for a trusted network;
   only the operational endpoints are token protected.
-- **Liveness only.** `/health` does not check the database.
+- **Liveness only.** `/health` does not check the database. The worker's
+  health check only proves its loop is still turning: it touches a heartbeat
+  file every iteration, and the container is unhealthy once the file is older
+  than three poll intervals (at least 60 seconds).
 - **Content type is not stored** by the filesystem object store.

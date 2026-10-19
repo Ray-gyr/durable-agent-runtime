@@ -80,6 +80,7 @@ All settings have defaults except `BUFFER_DEBUG_TOKEN`; see `.env.example`.
 | `BUFFER_FLUSH_THRESHOLD` | `100` | Pending events that trigger an automatic flush |
 | `BUFFER_FLUSH_LEASE_SECONDS` | `300` | How long a claimed batch is reserved |
 | `BUFFER_WORKER_POLL_SECONDS` | `5` | Worker poll interval |
+| `WORKER_HEARTBEAT_FILE` | unset (`/tmp/worker.heartbeat` in compose) | File the worker touches every loop; its age is the worker's health check |
 | `FAULT_PUT_FAILURES` | `0` | Fail the first N object writes before writing |
 | `FAULT_PUT_LOST_ACKS` | `0` | Write the next N objects, then report failure |
 | `FAULT_PUT_FAILURE_RATE` | `0` | Seeded random write failures (0–1) |

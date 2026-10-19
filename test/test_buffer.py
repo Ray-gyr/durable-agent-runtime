@@ -12,6 +12,7 @@ import io
 import os
 import sqlite3
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -199,6 +200,19 @@ async def test_worker_once_flushes_only_at_threshold(
     await run_worker(repo, store, settings, once=True)
     assert '"status": "flushed"' in capsys.readouterr().out
     assert len(objects(store)) == 1
+
+
+async def test_worker_touches_its_heartbeat_file_every_iteration(
+    repo: SqliteRepository, store: LocalObjectStore, settings: Settings, tmp_path: Path
+):
+    heartbeat = tmp_path / "health" / "worker.heartbeat"
+    await run_worker(repo, store, replace(settings, worker_heartbeat_file=heartbeat), once=True)
+    stale = heartbeat.stat().st_mtime_ns - 10**9
+    os.utime(heartbeat, ns=(stale, stale))
+
+    await run_worker(repo, store, replace(settings, worker_heartbeat_file=heartbeat), once=True)
+
+    assert heartbeat.stat().st_mtime_ns > stale, "an idle iteration still counts as a heartbeat"
 
 
 # ---------------------------------------------------------- backup / restore
