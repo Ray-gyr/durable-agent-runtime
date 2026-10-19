@@ -1,0 +1,6 @@
+-r requirements.in
+
+pytest
+pytest-randomly
+ruff
+mypy

@@ -1,0 +1,6 @@
+fastapi
+httpx
+pydantic
+python-dotenv
+uvicorn[standard]
+uvloop; sys_platform != "win32"

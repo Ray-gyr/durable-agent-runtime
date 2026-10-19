@@ -1,0 +1,40 @@
+# The API service and the buffer worker (no HTTP ingress) share one data volume
+# that holds the SQLite database and the object store.
+
+x-backend: &backend
+  build: .
+  image: durable-agent-runtime:local
+  volumes:
+    - ${HOST_DATA_DIR:-./data}:/data
+  environment: &backend-env
+    DATA_DIR: /data
+    OBJECT_STORE_PREFIX: ${OBJECT_STORE_PREFIX:-local}
+    BUFFER_FLUSH_BATCH_SIZE: ${BUFFER_FLUSH_BATCH_SIZE:-100}
+    BUFFER_FLUSH_THRESHOLD: ${BUFFER_FLUSH_THRESHOLD:-100}
+    BUFFER_FLUSH_LEASE_SECONDS: ${BUFFER_FLUSH_LEASE_SECONDS:-300}
+    BUFFER_WORKER_POLL_SECONDS: ${BUFFER_WORKER_POLL_SECONDS:-5}
+    # Fault injection for the object store; all off by default.
+    FAULT_PUT_FAILURES: ${FAULT_PUT_FAILURES:-0}
+    FAULT_PUT_LOST_ACKS: ${FAULT_PUT_LOST_ACKS:-0}
+    FAULT_PUT_FAILURE_RATE: ${FAULT_PUT_FAILURE_RATE:-0}
+    FAULT_PUT_LATENCY_MS: ${FAULT_PUT_LATENCY_MS:-0}
+    FAULT_SEED: ${FAULT_SEED:-0}
+
+services:
+  api:
+    <<: *backend
+    ports:
+      - "${API_PORT:-8080}:8080"
+    environment:
+      <<: *backend-env
+      BUFFER_DEBUG_TOKEN: ${BUFFER_DEBUG_TOKEN:?set BUFFER_DEBUG_TOKEN in .env}
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "app.buffer_worker"]
+    # The image health check probes HTTP; the worker has no HTTP endpoint.
+    healthcheck:
+      disable: true
+    depends_on:
+      api:
+        condition: service_healthy

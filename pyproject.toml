@@ -1,0 +1,21 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 120
+extend-exclude = [".venv", ".pytest_cache", "data"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["app"]
+ignore_missing_imports = true
+check_untyped_defs = true
+
+[tool.pytest.ini_options]
+# Smoke tests need running services; select them explicitly with `-m smoke`.
+addopts = "-m 'not smoke'"
+markers = [
+    "integration: tests that run real worker processes against a shared database and object store",
+    "smoke: tests that exercise the running docker compose services end to end",
+]
