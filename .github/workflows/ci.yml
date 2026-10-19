@@ -77,14 +77,30 @@ jobs:
           echo "BUFFER_DEBUG_TOKEN=${token}" >> "$GITHUB_ENV"
 
       - name: Build and start API and worker
-        run: docker compose up --detach --build --wait --wait-timeout 120
+        shell: bash
+        run: |
+          set -o pipefail
+          docker version --format 'engine {{.Server.Version}}'
+          docker compose version
+          docker compose up --detach --build --wait --wait-timeout 120 2>&1 | tee "${RUNNER_TEMP}/compose-up.log"
 
       - name: Run smoke tests against the running services
         run: python -m pytest -m smoke -q
 
-      - name: Show service logs on failure
+      # Print full logs, and surface their tail as an annotation so the cause
+      # shows on the checks page without opening the raw log.
+      - name: Report service state and logs on failure
         if: failure()
-        run: docker compose logs --no-color
+        shell: bash
+        run: |
+          docker compose ps --all || true
+          docker compose logs --no-color || true
+          {
+            echo "== compose up (tail)"; tail -n 30 "${RUNNER_TEMP}/compose-up.log" 2>/dev/null
+            echo "== service logs (tail)"; docker compose logs --no-color --tail 30 2>/dev/null
+          } > "${RUNNER_TEMP}/failure.txt" || true
+          summary="$(sed -e 's/%/%25/g' -e 's/\r/%0D/g' "${RUNNER_TEMP}/failure.txt" | awk '{printf "%s%%0A", $0}')"
+          echo "::error title=Compose deployment failed::${summary}"
 
       - name: Stop services
         if: always()
