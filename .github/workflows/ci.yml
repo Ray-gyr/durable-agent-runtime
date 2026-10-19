@@ -49,8 +49,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      HOST_DATA_DIR: ${{ runner.temp }}/runtime-data
-      SMOKE_OBJECT_STORE_ROOT: ${{ runner.temp }}/runtime-data/objects
       FASTAPI_BASE_URL: http://127.0.0.1:8080
       BUFFER_WORKER_POLL_SECONDS: "1"
     steps:
@@ -67,9 +65,13 @@ jobs:
       - name: Install locked development dependencies
         run: python -m pip install -r requirements-dev.txt
 
-      - name: Generate a run-scoped debug token
+      # The runner context is not available in job-level env, so paths under
+      # RUNNER_TEMP are exported at run time.
+      - name: Configure data directory and a run-scoped debug token
         shell: bash
         run: |
+          echo "HOST_DATA_DIR=${RUNNER_TEMP}/runtime-data" >> "$GITHUB_ENV"
+          echo "SMOKE_OBJECT_STORE_ROOT=${RUNNER_TEMP}/runtime-data/objects" >> "$GITHUB_ENV"
           token="$(openssl rand -hex 24)"
           echo "::add-mask::${token}"
           echo "BUFFER_DEBUG_TOKEN=${token}" >> "$GITHUB_ENV"
